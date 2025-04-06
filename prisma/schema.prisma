@@ -8,12 +8,14 @@ datasource db {
 }
 
 model User {
-  id        String    @id               @default(uuid())
-  name      String 
-  email     String    @unique
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
   password  String
-  role      Role      @default(PLAYER)
-  createdAt DateTime  @default(now())
+  role      Role     @default(PLAYER)
+  createdAt DateTime @default(now())
+
+  teamsLed Team[] @relation("LeaderTeams")
 }
 
 enum Role {
@@ -21,3 +23,29 @@ enum Role {
   LEADER
   SUBLEADER
 }
+
+model Team {
+  id        String   @id @default(uuid())
+  name      String
+  city      String
+  color1    String
+  color2    String?
+  createdAt DateTime @default(now())
+
+  leaderId String
+  leader   User   @relation("LeaderTeams", fields: [leaderId], references: [id])
+}
+
+model PlayerTeam {
+  id           String   @id @default(uuid())
+  playerId     String
+  teamId       String
+  isConfirmed  Boolean  @default(false)
+  isSubleader  Boolean  @default(false)
+
+  player       User     @relation(fields: [playerId], references: [id])
+  team         Team     @relation(fields: [teamId], references: [id])
+
+  @@unique([playerId, teamId])
+}
+

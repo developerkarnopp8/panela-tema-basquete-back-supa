@@ -15,7 +15,6 @@ model User {
   role      Role     @default(PLAYER)
   createdAt DateTime @default(now())
 
-  teamsLed      Team[]       @relation("LeaderTeams")
 }
 
 enum Role {
@@ -24,16 +23,4 @@ enum Role {
   SUBLEADER
 }
 
-model Team {
-  id        String   @id @default(uuid())
-  name      String
-  city      String
-  color1    String
-  color2    String?
-  createdAt DateTime @default(now())
-
-  leaderId String
-  leader   User   @relation("LeaderTeams", fields: [leaderId], references: [id])
-
-}
 

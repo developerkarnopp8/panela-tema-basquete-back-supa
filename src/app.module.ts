@@ -9,8 +9,6 @@ import { PrismaModule } from './prisma/prisma.module';
 // MODULOS DO APP
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { TeamsModule } from './teams/teams.module';
-import { PlayerTeamModule } from './player-team/player-team.module';
 
 @Module({
   imports: [
@@ -20,8 +18,6 @@ import { PlayerTeamModule } from './player-team/player-team.module';
     UsersModule,
     PrismaModule,
     AuthModule,
-    TeamsModule,
-    PlayerTeamModule,
   ],
   controllers: [AppController],
   providers: [AppService],

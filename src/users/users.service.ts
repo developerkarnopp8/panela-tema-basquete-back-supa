@@ -7,14 +7,17 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: { name: string; email: string; password: string; role?: 'PLAYER' | 'LEADER' | 'SUBLEADER' }) {
+  async create(data: { name: string; email: string; password: string}) {
+    const totalUsers = await this.prisma.user.count();
+
     const hashedPassword = await bcrypt.hash(data.password, 10);
+
     return this.prisma.user.create({
       data: {
         name: data.name,
         email: data.email,
         password: hashedPassword,
-        role: data.role || 'PLAYER',
+        role: totalUsers === 0 ? 'LEADER' : 'PLAYER',
       },
     });
   }

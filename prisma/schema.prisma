@@ -16,8 +16,6 @@ model User {
   createdAt DateTime @default(now())
 
   teamsLed      Team[]       @relation("LeaderTeams")
-  teamsJoined   PlayerTeam[]
-  eventsCreated Event[]      @relation("LeaderEvents")
 }
 
 enum Role {
@@ -37,35 +35,5 @@ model Team {
   leaderId String
   leader   User   @relation("LeaderTeams", fields: [leaderId], references: [id])
 
-  players PlayerTeam[]
-  events  Event[]
 }
 
-model PlayerTeam {
-  id          String  @id @default(uuid())
-  playerId    String
-  teamId      String
-  isConfirmed Boolean @default(false)
-  isSubleader Boolean @default(false)
-
-  player User @relation(fields: [playerId], references: [id])
-  team   Team @relation(fields: [teamId], references: [id])
-
-  @@unique([playerId, teamId], name: "playerId_teamId")
-}
-
-
-model Event {
-  id        String   @id @default(uuid())
-  title     String
-  local     String
-  date      DateTime
-  startTime DateTime
-  endTime   DateTime
-
-  teamId      String
-  createdById String
-
-  team      Team @relation(fields: [teamId], references: [id])
-  createdBy User @relation("LeaderEvents", fields: [createdById], references: [id])
-}

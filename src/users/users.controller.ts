@@ -33,8 +33,19 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('LEADER')
   @Patch(':id')
-  updateUser(@Param('id') id: string, @Body() data: any, @Req() req: any) {
-    return this.usersService.updateUser(id, data, req.user.userId);
+  updateUserByLeader(@Param('id') id: string, @Body() data: any, @Req() req: any) {
+    return this.usersService.updateUserByLeader(id, data, req.user.userId); // ou req.user.id
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  updateMyData(@Req() req: any, @Body() data: any) {
+    const allowedFields = {
+      name: data.name,
+      email: data.email,
+    };
+
+    return this.usersService.updateMyProfile(req.user.userId, allowedFields); // ou req.user.id
   }
 
 }

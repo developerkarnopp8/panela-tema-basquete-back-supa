@@ -71,11 +71,15 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { email } });
   }
 
-  async updateUser(targetUserId: string, data: Partial<{ name: string; email: string; role: Role }>, leaderId: string) {
+  async updateUserByLeader(
+    targetUserId: string,
+    data: Partial<{ name: string; email: string; role: Role }>,
+    leaderId: string
+  ) {
     const leader = await this.prisma.user.findUnique({ where: { id: leaderId } });
-    const userToUpdate = await this.prisma.user.findUnique({ where: { id: targetUserId } });
+    const targetUser = await this.prisma.user.findUnique({ where: { id: targetUserId } });
   
-    if (!leader || !userToUpdate) {
+    if (!leader || !targetUser) {
       throw new Error('Usuário não encontrado');
     }
   
@@ -83,19 +87,21 @@ export class UsersService {
       throw new Error('Apenas o líder pode editar outros usuários');
     }
   
-    if (leader.eventId !== userToUpdate.eventId) {
+    if (leader.eventId !== targetUser.eventId) {
       throw new Error('Usuário não pertence ao mesmo evento');
     }
   
     return this.prisma.user.update({
       where: { id: targetUserId },
-      data: {
-        name: data.name,
-        email: data.email,
-        role: data.role, // pode ser PLAYER ou SUBLEADER
-      },
+      data,
     });
   }
   
-
+  async updateMyProfile(userId: string, data: Partial<{ name: string; email: string }>) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+  }
+  
 }

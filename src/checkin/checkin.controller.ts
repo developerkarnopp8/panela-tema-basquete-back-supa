@@ -19,6 +19,7 @@ export class CheckinController {
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateCheckinDto) {
+    console.log('Update checkin', id, dto);
     return this.checkinService.updateCheckin(id, dto);
   }
 

@@ -7,20 +7,21 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { RolesGuard } from 'src/common/guards/roles.guard';
-// import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { CreateLeaderWithEventDto } from './dto/create-leader-with-event.dto';
 
 @Controller('users')
 export class UsersController {
   
   constructor(private readonly usersService: UsersService) {}
 
-  // @UseGuards(JwtAuthGuard)
+
+  @Post('leader-with-event')
+  createLeaderWithEvent(@Body() dto: CreateLeaderWithEventDto) {
+    return this.usersService.createLeader(dto);
+  }
+
   @Post()
   create(@Body() dto: CreateUserDto) {
-    if (!dto.eventId) {
-      return this.usersService.createLeader(dto);
-    }
-
     return this.usersService.create({ ...dto, eventId: dto.eventId || '' });
   }
 

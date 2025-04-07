@@ -44,7 +44,13 @@ export class UsersService {
     return user;
   }
 
-  async createLeader(data: { name: string; email: string; password: string; eventId?: string }) {
+  async createLeader(data: {
+    name: string;
+    email: string;
+    password: string;
+    eventName: string;
+    eventType: 'GAME' | 'CHAMPIONSHIP';
+  }) {
     const totalUsers = await this.prisma.user.count();
   
     if (totalUsers > 0) {
@@ -53,27 +59,46 @@ export class UsersService {
   
     const hashedPassword = await bcrypt.hash(data.password, 10);
   
-    const user = await this.prisma.user.create({
-      data: {
-        name: data.name,
-        email: data.email,
-        password: hashedPassword,
-        role: 'LEADER',
-      },
-    });
-  
-    // Se quiser registrar check-in mesmo pro líder, só se tiver um eventId válido
-    if (data.eventId) {
-      await this.prisma.checkin.create({
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Cria o líder
+      const user = await tx.user.create({
         data: {
-          userId: user.id,
-          eventId: data.eventId,
+          name: data.name,
+          email: data.email,
+          password: hashedPassword,
+          role: 'LEADER',
         },
       });
-    }
   
-    return user;
+      // 2. Cria o evento
+      const event = await tx.event.create({
+        data: {
+          name: data.eventName,
+          type: data.eventType,
+          createdBy: user.id,
+        },
+      });
+  
+      // 3. Atualiza o líder com o eventId
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          eventId: event.id,
+        },
+      });
+  
+      // 4. Cria check-in do líder
+      await tx.checkin.create({
+        data: {
+          userId: user.id,
+          eventId: event.id,
+        },
+      });
+  
+      return { user, event };
+    });
   }
+  
   
 
   async findUsersByEvent(eventId: string) {

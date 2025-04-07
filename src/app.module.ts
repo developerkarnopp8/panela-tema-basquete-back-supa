@@ -9,6 +9,7 @@ import { PrismaModule } from './prisma/prisma.module';
 // MODULOS DO APP
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { EventModule } from './event/event.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     PrismaModule,
     AuthModule,
+    EventModule,
   ],
   controllers: [AppController],
   providers: [AppService],

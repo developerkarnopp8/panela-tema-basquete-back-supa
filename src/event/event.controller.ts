@@ -1,8 +1,10 @@
-import { Controller, Post, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Req, UseGuards, Delete, Param } from '@nestjs/common';
 import { EventsService } from './event.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { Request } from 'express';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { RolesGuard } from 'src/common/guards/roles.guard';
 
 @Controller('events')
 export class EventsController {
@@ -16,5 +18,13 @@ export class EventsController {
       ...dto,
       createdBy: user.userId,
     });
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('LEADER')
+  @Delete(':id')
+  delete(@Param('id') eventId: string, @Req() req: any) {
+    const user = req.user as any;
+    return this.eventsService.deleteEvent(eventId, user.userId);
   }
 }

@@ -27,4 +27,39 @@ export class EventsService {
       return event;
     });
   }
+
+  async deleteEvent(eventId: string, userId: string) {
+    // Verifica se o evento é do usuário logado (LEADER)
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+    
+    if (!event || event?.createdBy !== userId) {
+      throw new Error('Apenas o líder criador do evento pode deletá-lo');
+    }
+  
+    // Deleta todos os usuários do evento, exceto o líder
+    await this.prisma.user.deleteMany({
+      where: {
+        eventId,
+        NOT: {
+          id: userId,
+        },
+      },
+    });
+  
+    // Remove a referência do líder ao evento
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        eventId: null,
+      },
+    });
+  
+    // Deleta o evento
+    return this.prisma.event.delete({
+      where: { id: eventId },
+    });
+  }
+  
 }

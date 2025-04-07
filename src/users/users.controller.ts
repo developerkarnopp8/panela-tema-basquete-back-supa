@@ -1,9 +1,10 @@
 /* eslint-disable prettier/prettier */
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 
 import { UsersService } from './users.service';
 
 import { CreateUserDto } from './dto/create-user.dto';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 // import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @Controller('users')
@@ -19,5 +20,11 @@ export class UsersController {
     }
 
     return this.usersService.create({ ...dto, eventId: dto.eventId || '' });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('event/:eventId')
+  findByEvent(@Param('eventId') eventId: string) {
+    return this.usersService.findUsersByEvent(eventId);
   }
 }

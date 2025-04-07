@@ -4,6 +4,9 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
+  findById(userId: any) {
+    throw new Error('Method not implemented.');
+  }
   constructor(private prisma: PrismaService) {}
 
   async create(data: { name: string; email: string; password: string; eventId: string }) {
@@ -47,6 +50,21 @@ export class UsersService {
     });
   }
 
+  async findUsersByEvent(eventId: string) {
+    return this.prisma.user.findMany({
+      where: { eventId },
+      orderBy: { 
+        createdAt: 'asc'
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+  }  
   async findByEmail(email: string) {
     return this.prisma.user.findUnique({ where: { email } });
   }

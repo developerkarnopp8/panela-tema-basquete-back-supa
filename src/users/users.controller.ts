@@ -34,7 +34,7 @@ export class UsersController {
   @Roles('LEADER')
   @Patch(':id')
   updateUserByLeader(@Param('id') id: string, @Body() data: any, @Req() req: any) {
-    return this.usersService.updateUserByLeader(id, data, req.user.userId); // ou req.user.id
+    return this.usersService.updateUserByLeader(id, data, req.user.userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -45,7 +45,7 @@ export class UsersController {
       email: data.email,
     };
 
-    return this.usersService.updateMyProfile(req.user.userId, allowedFields); // ou req.user.id
+    return this.usersService.updateMyProfile(req.user.userId, allowedFields);
   }
 
 }

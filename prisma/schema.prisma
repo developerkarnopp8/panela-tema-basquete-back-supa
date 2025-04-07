@@ -15,6 +15,7 @@ model User {
   role      Role     @default(PLAYER)
   eventId   String?
   event     Event?   @relation("EventUsers", fields: [eventId], references: [id])
+  checkins  Checkin[]
   createdAt DateTime @default(now())
 }
 
@@ -32,9 +33,24 @@ model Event {
   createdAt  DateTime @default(now())
   createdBy  String
   users      User[]   @relation("EventUsers")
+  checkins   Checkin[]
 }
 
 enum EventType {
   GAME
   CHAMPIONSHIP
+}
+
+
+model Checkin {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String
+  checkedIn Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  event     Event    @relation(fields: [eventId], references: [id])
+
+  @@unique([userId, eventId])
 }

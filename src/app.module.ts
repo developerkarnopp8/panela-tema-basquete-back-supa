@@ -10,6 +10,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { EventModule } from './event/event.module';
+import { CheckinModule } from './checkin/checkin.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { EventModule } from './event/event.module';
     PrismaModule,
     AuthModule,
     EventModule,
+    CheckinModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -10,7 +10,7 @@ export class UsersService {
   }
   constructor(private prisma: PrismaService) {}
 
-  async create(data: { name: string; email: string; password: string; eventId: string }) {
+  async create(data: { name: string; email: string; password: string; eventId?: string }) {
     const event = await this.prisma.event.findUnique({
       where: { id: data.eventId },
     });
@@ -21,7 +21,7 @@ export class UsersService {
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    return this.prisma.user.create({
+    const user = this.prisma.user.create({
       data: {
         name: data.name,
         email: data.email,
@@ -30,18 +30,30 @@ export class UsersService {
         eventId: data.eventId,
       },
     });
+
+    // Cria check-in automático
+    if (data.eventId) {
+      await this.prisma.checkin.create({
+        data: {
+          userId: (await user).id,
+          eventId: data.eventId,
+        },
+      });
+    }
+
+    return user;
   }
 
-  async createLeader(data: { name: string; email: string; password: string }) {
+  async createLeader(data: { name: string; email: string; password: string; eventId?: string }) {
     const totalUsers = await this.prisma.user.count();
-
+  
     if (totalUsers > 0) {
       throw new Error('Apenas o primeiro usuário pode ser líder sem evento');
     }
-
+  
     const hashedPassword = await bcrypt.hash(data.password, 10);
-
-    return this.prisma.user.create({
+  
+    const user = await this.prisma.user.create({
       data: {
         name: data.name,
         email: data.email,
@@ -49,7 +61,20 @@ export class UsersService {
         role: 'LEADER',
       },
     });
+  
+    // Se quiser registrar check-in mesmo pro líder, só se tiver um eventId válido
+    if (data.eventId) {
+      await this.prisma.checkin.create({
+        data: {
+          userId: user.id,
+          eventId: data.eventId,
+        },
+      });
+    }
+  
+    return user;
   }
+  
 
   async findUsersByEvent(eventId: string) {
     return this.prisma.user.findMany({

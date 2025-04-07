@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -65,7 +66,36 @@ export class UsersService {
       },
     });
   }  
+
   async findByEmail(email: string) {
     return this.prisma.user.findUnique({ where: { email } });
   }
+
+  async updateUser(targetUserId: string, data: Partial<{ name: string; email: string; role: Role }>, leaderId: string) {
+    const leader = await this.prisma.user.findUnique({ where: { id: leaderId } });
+    const userToUpdate = await this.prisma.user.findUnique({ where: { id: targetUserId } });
+  
+    if (!leader || !userToUpdate) {
+      throw new Error('Usuário não encontrado');
+    }
+  
+    if (leader.role !== 'LEADER') {
+      throw new Error('Apenas o líder pode editar outros usuários');
+    }
+  
+    if (leader.eventId !== userToUpdate.eventId) {
+      throw new Error('Usuário não pertence ao mesmo evento');
+    }
+  
+    return this.prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        name: data.name,
+        email: data.email,
+        role: data.role, // pode ser PLAYER ou SUBLEADER
+      },
+    });
+  }
+  
+
 }

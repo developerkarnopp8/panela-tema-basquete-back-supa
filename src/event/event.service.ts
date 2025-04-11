@@ -1,25 +1,76 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class EventsService {
   constructor(private prisma: PrismaService) {}
 
-  async createEvent(data: { name: string; type: 'GAME' | 'CHAMPIONSHIP'; createdBy: string }) {
+  async createEvent(data: {
+    eventName: string;
+    description: string;
+    type: 'GAME' | 'CHAMPIONSHIP';
+    startDateTime: string;
+    endDateTime: string;
+    createdBy: string;
+    isOpen?: boolean;
+    images?: string[];
+  }) {
+    const start = new Date(data.startDateTime);
+    const end = new Date(data.endDateTime);
+
+    const minutes = (end.getTime() - start.getTime()) / 60000;
+
+    if (minutes < 60) {
+      throw new BadRequestException('A duração mínima do evento é de 60 minutos.');
+    }
+
+    const conflict = await this.prisma.event.findFirst({
+      where: {
+        createdBy: data.createdBy,
+        AND: [
+          {
+            startDateTime: {
+              lt: new Date(data.endDateTime), // evento que começa ANTES do fim do novo
+            },
+          },
+          {
+            endDateTime: {
+              gt: new Date(data.startDateTime), // evento que termina DEPOIS do início do novo
+            },
+          },
+        ],
+      },
+    });
+    
+
+    if (conflict) {
+      throw new BadRequestException('Já existe um evento nesse intervalo de tempo.');
+    }
+
     return this.prisma.$transaction(async (tx) => {
-      // 1. Cria o evento com o líder como criador
       const event = await tx.event.create({
         data: {
-          name: data.name,
+          name: data.eventName,
+          description: data.description,
           type: data.type,
+          startDateTime: start,
+          endDateTime: end,
+          isOpen: data.isOpen ?? false,
+          images: data.images ?? [],
           createdBy: data.createdBy,
         },
       });
 
-      // 2. Atualiza o usuário (líder) para se vincular ao evento
       await tx.user.update({
         where: { id: data.createdBy },
         data: {
+          eventId: event.id,
+        },
+      });
+
+      await tx.checkin.create({
+        data: {
+          userId: data.createdBy,
           eventId: event.id,
         },
       });

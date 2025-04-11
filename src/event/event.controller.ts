@@ -17,7 +17,6 @@ export class EventsController {
     return this.eventsService.getEventsForUser(user);
   }
 
-
   @UseGuards(JwtAuthGuard)
   @Post()
   create(@Body() dto: CreateEventDto, @Req() req: Request) {
@@ -36,5 +35,4 @@ export class EventsController {
     return this.eventsService.deleteEvent(eventId, user.userId);
   }
 
-  
 }

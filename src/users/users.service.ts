@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
+import { CreateLeaderWithEventDto } from './dto/create-leader-with-event.dto';
 
 @Injectable()
 export class UsersService {
@@ -44,13 +45,7 @@ export class UsersService {
     return user;
   }
 
-  async createLeader(data: {
-    name: string;
-    email: string;
-    password: string;
-    eventName: string;
-    eventType: 'GAME' | 'CHAMPIONSHIP';
-  }) {
+  async createLeader(data: CreateLeaderWithEventDto) {
     const totalUsers = await this.prisma.user.count();
   
     if (totalUsers > 0) {
@@ -60,7 +55,6 @@ export class UsersService {
     const hashedPassword = await bcrypt.hash(data.password, 10);
   
     return this.prisma.$transaction(async (tx) => {
-      // 1. Cria o líder
       const user = await tx.user.create({
         data: {
           name: data.name,
@@ -70,16 +64,19 @@ export class UsersService {
         },
       });
   
-      // 2. Cria o evento
       const event = await tx.event.create({
         data: {
           name: data.eventName,
-          type: data.eventType,
+          description: data.description,
+          type: data.type,
+          startDateTime: new Date(data.startDateTime),
+          endDateTime: new Date(data.endDateTime),
+          isOpen: data.isOpen ?? false,
+          images: data.images ?? [],
           createdBy: user.id,
         },
       });
   
-      // 3. Atualiza o líder com o eventId
       await tx.user.update({
         where: { id: user.id },
         data: {
@@ -87,7 +84,6 @@ export class UsersService {
         },
       });
   
-      // 4. Cria check-in do líder
       await tx.checkin.create({
         data: {
           userId: user.id,

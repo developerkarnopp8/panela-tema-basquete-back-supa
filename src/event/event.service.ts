@@ -28,6 +28,26 @@ export class EventsService {
     });
   }
 
+  async getEventsForUser(user: { userId: string; role: string }) {
+    if (user.role === 'LEADER') {
+      // Líder vê eventos que ele criou
+      return this.prisma.event.findMany({
+        where: { createdBy: user.userId },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+  
+    // PLAYER ou SUBLEADER vê apenas o evento que está vinculado
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: user.userId },
+      include: { event: true },
+    });
+  
+    if (!currentUser?.event) return [];
+  
+    return [currentUser.event];
+  }
+  
   async deleteEvent(eventId: string, userId: string) {
     // Verifica se o evento é do usuário logado (LEADER)
     const event = await this.prisma.event.findUnique({

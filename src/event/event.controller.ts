@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, UseGuards, Delete, Param } from '@nestjs/common';
+import { Controller, Post, Body, Req, UseGuards, Delete, Param, Get } from '@nestjs/common';
 import { EventsService } from './event.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { Request } from 'express';
@@ -9,6 +9,14 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 @Controller('events')
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  async listEvents(@Req() req: any) {
+    const user = req.user as any;
+    return this.eventsService.getEventsForUser(user);
+  }
+
 
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -27,4 +35,6 @@ export class EventsController {
     const user = req.user as any;
     return this.eventsService.deleteEvent(eventId, user.userId);
   }
+
+  
 }

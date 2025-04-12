@@ -1,10 +1,11 @@
-import { Controller, Post, Body, Req, UseGuards, Delete, Param, Get } from '@nestjs/common';
+import { Controller, Post, Body, Req, UseGuards, Delete, Param, Get, Patch } from '@nestjs/common';
 import { EventsService } from './event.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { Request } from 'express';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { RolesGuard } from 'src/common/guards/roles.guard';
+import { UpdateEventDto } from './dto/update-event.dto';
 
 @Controller('events')
 export class EventsController {
@@ -25,6 +26,17 @@ export class EventsController {
       ...dto,
       createdBy: user.userId,
     });
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('LEADER')
+  @Patch(':id')
+  update(
+    @Param('id') eventId: string,
+    @Body() data: UpdateEventDto,
+    @Req() req: any,
+  ) {
+    return this.eventsService.updateEvent(eventId, data, req.user.userId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

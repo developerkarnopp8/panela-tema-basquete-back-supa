@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { UpdateEventDto } from './dto/update-event.dto';
 
 @Injectable()
 export class EventsService {
@@ -98,6 +99,53 @@ export class EventsService {
   
     return [currentUser.event];
   }
+
+  async updateEvent(eventId: string, data: UpdateEventDto, userId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+  
+    if (!event || event.createdBy !== userId) {
+      throw new Error('Você não tem permissão para editar este evento');
+    }
+  
+    // Verifica se houve alteração de horário
+    if (data.startDateTime && data.endDateTime) {
+      const start = new Date(data.startDateTime);
+      const end = new Date(data.endDateTime);
+      const minutes = (end.getTime() - start.getTime()) / 60000;
+  
+      if (minutes < 60) {
+        throw new Error('A duração mínima do evento é de 60 minutos');
+      }
+  
+      // Verifica conflito com outros eventos
+      const conflict = await this.prisma.event.findFirst({
+        where: {
+          id: { not: eventId },
+          createdBy: userId,
+          AND: [
+            { startDateTime: { lt: end } },
+            { endDateTime: { gt: start } },
+          ],
+        },
+      });
+  
+      if (conflict) {
+        throw new Error('Já existe um evento nesse horário');
+      }
+    }
+  
+    return this.prisma.event.update({
+      where: { id: eventId },
+      data: {
+        ...data,
+        startDateTime: data.startDateTime ? new Date(data.startDateTime) : undefined,
+        endDateTime: data.endDateTime ? new Date(data.endDateTime) : undefined,
+      },
+    });
+  }
+  
   
   async deleteEvent(eventId: string, userId: string) {
     // Verifica se o evento é do usuário logado (LEADER)

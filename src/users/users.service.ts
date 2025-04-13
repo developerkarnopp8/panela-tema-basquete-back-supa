@@ -46,12 +46,14 @@ export class UsersService {
   }
 
   async createLeader(data: CreateLeaderWithEventDto) {
-    const totalUsers = await this.prisma.user.count();
   
-    if (totalUsers > 0) {
-      throw new Error('Apenas o primeiro usuário pode ser líder sem evento');
+    const userExists = await this.prisma.user.findUnique({
+      where: { email: data.email }
+    });
+    
+    if (userExists) {
+      throw new Error('Já existe um usuário com esse e-mail');
     }
-  
     const hashedPassword = await bcrypt.hash(data.password, 10);
   
     return this.prisma.$transaction(async (tx) => {

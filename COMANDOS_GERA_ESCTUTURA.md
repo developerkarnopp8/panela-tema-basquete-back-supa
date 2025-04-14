@@ -33,4 +33,7 @@
 
 ### APÓS VAMOS CRIAR AS ROTAS NO CONTROLLER (Passo 05)
 
-  
+### SWAGGER
+
+http://localhost:3000/docs#/
+

@@ -1,6 +1,13 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { CreateEventInstanceDto } from './dto/create-instance.dto';
+import { UpdateEventInstanceDto } from './dto/update-instance.dto';
 
 @Injectable()
 export class EventsService {
@@ -10,53 +17,15 @@ export class EventsService {
     eventName: string;
     description: string;
     type: 'GAME' | 'CHAMPIONSHIP';
-    startDateTime: string;
-    endDateTime: string;
     createdBy: string;
-    isOpen?: boolean;
     images?: string[];
   }) {
-    const start = new Date(data.startDateTime);
-    const end = new Date(data.endDateTime);
-
-    const minutes = (end.getTime() - start.getTime()) / 60000;
-
-    if (minutes < 60) {
-      throw new BadRequestException('A duração mínima do evento é de 60 minutos.');
-    }
-
-    const conflict = await this.prisma.event.findFirst({
-      where: {
-        createdBy: data.createdBy,
-        AND: [
-          {
-            startDateTime: {
-              lt: new Date(data.endDateTime), // evento que começa ANTES do fim do novo
-            },
-          },
-          {
-            endDateTime: {
-              gt: new Date(data.startDateTime), // evento que termina DEPOIS do início do novo
-            },
-          },
-        ],
-      },
-    });
-    
-
-    if (conflict) {
-      throw new BadRequestException('Já existe um evento nesse intervalo de tempo.');
-    }
-
     return this.prisma.$transaction(async (tx) => {
       const event = await tx.event.create({
         data: {
           name: data.eventName,
           description: data.description,
           type: data.type,
-          startDateTime: start,
-          endDateTime: end,
-          isOpen: data.isOpen ?? false,
           images: data.images ?? [],
           createdBy: data.createdBy,
         },
@@ -69,34 +38,112 @@ export class EventsService {
         },
       });
 
-      await tx.checkin.create({
-        data: {
-          userId: data.createdBy,
-          eventId: event.id,
-        },
-      });
-
       return event;
+    });
+  }
+
+  async createInstance(eventId: string, dto: CreateEventInstanceDto, leaderId: string) {
+    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
+
+    if (!event || event.createdBy !== leaderId) {
+      throw new ForbiddenException('Apenas o líder do evento pode criar execuções');
+    }
+
+    const start = new Date(dto.startTime);
+    const end = new Date(dto.endTime);
+    const duration = (end.getTime() - start.getTime()) / 60000;
+
+    if (duration < 60) {
+      throw new BadRequestException('A duração mínima do evento é de 60 minutos');
+    }
+
+    const overlapping = await this.prisma.eventInstance.findFirst({
+      where: {
+        eventId,
+        OR: [
+          {
+            startTime: { lt: end },
+            endTime: { gt: start },
+          },
+        ],
+      },
+    });
+
+    if (overlapping) {
+      throw new BadRequestException('Já existe uma instância com horário conflitante.');
+    }
+
+    const instance = await this.prisma.eventInstance.create({
+      data: {
+        eventId,
+        date: new Date(dto.date || dto.startTime),
+        startTime: start,
+        endTime: end,
+        isOpen: dto.isOpen ?? false,
+      },
+    });
+
+    // Adiciona o check-in automático do líder
+    await this.prisma.checkin.create({
+      data: {
+        user: { connect: { id: leaderId } },
+        instance: { connect: { id: instance.id } },
+        checkedIn: true,
+      },
+    });
+
+    return instance;
+  }
+
+  async updateInstance(instanceId: string, data: UpdateEventInstanceDto, leaderId: string) {
+    const instance = await this.prisma.eventInstance.findUnique({
+      where: { id: instanceId },
+      include: { event: true },
+    });
+  
+    if (!instance) throw new NotFoundException('Instância não encontrada');
+    if (instance.event.createdBy !== leaderId) {
+      throw new ForbiddenException('Apenas o líder do evento pode atualizar a instância');
+    }
+  
+    return this.prisma.eventInstance.update({
+      where: { id: instanceId },
+      data: {
+        startTime: data.startTime ? new Date(data.startTime) : undefined,
+        endTime: data.endTime ? new Date(data.endTime) : undefined,
+        isOpen: data.isOpen,
+      },
     });
   }
 
   async getEventsForUser(user: { userId: string; role: string }) {
     if (user.role === 'LEADER') {
-      // Líder vê eventos que ele criou
       return this.prisma.event.findMany({
         where: { createdBy: user.userId },
         orderBy: { createdAt: 'desc' },
+        include: {
+          instances: {
+            orderBy: { startTime: 'asc' },
+          },
+        },
       });
     }
-  
-    // PLAYER ou SUBLEADER vê apenas o evento que está vinculado
+
     const currentUser = await this.prisma.user.findUnique({
       where: { id: user.userId },
-      include: { event: true },
+      include: { 
+        event: {
+          include: {
+            instances: {
+              orderBy: { startTime: 'asc' },
+            },
+          },
+        },
+       },
     });
-  
+
     if (!currentUser?.event) return [];
-  
+
     return [currentUser.event];
   }
 
@@ -104,81 +151,52 @@ export class EventsService {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
     });
-  
-    if (!event || event.createdBy !== userId) {
-      throw new Error('Você não tem permissão para editar este evento');
-    }
-  
-    // Verifica se houve alteração de horário
-    if (data.startDateTime && data.endDateTime) {
-      const start = new Date(data.startDateTime);
-      const end = new Date(data.endDateTime);
-      const minutes = (end.getTime() - start.getTime()) / 60000;
-  
-      if (minutes < 60) {
-        throw new Error('A duração mínima do evento é de 60 minutos');
-      }
-  
-      // Verifica conflito com outros eventos
-      const conflict = await this.prisma.event.findFirst({
-        where: {
-          id: { not: eventId },
-          createdBy: userId,
-          AND: [
-            { startDateTime: { lt: end } },
-            { endDateTime: { gt: start } },
-          ],
-        },
-      });
-  
-      if (conflict) {
-        throw new Error('Já existe um evento nesse horário');
-      }
-    }
-  
+
+    if (!event) throw new NotFoundException('Evento não encontrado');
+    if (event.createdBy !== userId) throw new ForbiddenException('Você não tem permissão para editar este evento');
+
+    // Removemos as validações de horário porque isso agora é responsabilidade da instancia
     return this.prisma.event.update({
       where: { id: eventId },
       data: {
-        ...data,
-        startDateTime: data.startDateTime ? new Date(data.startDateTime) : undefined,
-        endDateTime: data.endDateTime ? new Date(data.endDateTime) : undefined,
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        images: data.images,
       },
     });
   }
-  
-  
+
   async deleteEvent(eventId: string, userId: string) {
-    // Verifica se o evento é do usuário logado (LEADER)
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
     });
-    
-    if (!event || event?.createdBy !== userId) {
-      throw new Error('Apenas o líder criador do evento pode deletá-lo');
+
+    if (!event) throw new NotFoundException('Evento não encontrado');
+    if (event.createdBy !== userId) {
+      throw new ForbiddenException('Apenas o líder criador do evento pode deletá-lo');
     }
-  
-    // Deleta todos os usuários do evento, exceto o líder
+
+    await this.prisma.eventInstance.deleteMany({
+      where: { eventId },
+    });
+
     await this.prisma.user.deleteMany({
       where: {
         eventId,
-        NOT: {
-          id: userId,
-        },
+        NOT: { id: userId },
       },
     });
-  
-    // Remove a referência do líder ao evento
+
     await this.prisma.user.update({
       where: { id: userId },
       data: {
         eventId: null,
       },
     });
-  
-    // Deleta o evento
+
     return this.prisma.event.delete({
       where: { id: eventId },
     });
   }
-  
 }

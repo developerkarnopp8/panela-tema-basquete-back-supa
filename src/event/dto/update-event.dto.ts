@@ -1,10 +1,25 @@
+import { ApiProperty } from '@nestjs/swagger';
+
 export class UpdateEventDto {
-    name?: string;
-    description?: string;
-    startDateTime?: string;
-    endDateTime?: string;
-    isOpen?: boolean;
-    images?: string[];
-    type?: 'GAME' | 'CHAMPIONSHIP';
-  }
+  @ApiProperty()
+  name?: string;
+
+  @ApiProperty()
+  description?: string;
+
+  @ApiProperty()
+  startDateTime?: string;
+
+  @ApiProperty()
+  endDateTime?: string;
+
+  @ApiProperty()
+  isOpen?: boolean;
+
+  @ApiProperty()
+  images?: string[];
+
+  @ApiProperty()
+  type?: 'GAME' | 'CHAMPIONSHIP';
+}
   

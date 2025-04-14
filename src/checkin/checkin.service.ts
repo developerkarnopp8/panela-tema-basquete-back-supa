@@ -12,9 +12,9 @@ export class CheckinService {
     });
   }
 
-  async getCheckinsByEvent(eventId: string) {
+  async getCheckinsByEvent(eventInstanceId: string) {
     return this.prisma.checkin.findMany({
-      where: { eventId },
+      where: { eventInstanceId },
       include: {
         user: {
           select: {
@@ -29,19 +29,19 @@ export class CheckinService {
     });
   }
 
-  async getCheckinByUser(userId: string, eventId: string) {
+  async getCheckinByUser(userId: string, eventInstanceId: string) {
     return this.prisma.checkin.findFirst({
       where: {
         userId,
-        eventId,
+        eventInstanceId,
       },
     });
   }
 
-  async getConfirmedByEvent(eventId: string) {
+  async getConfirmedByEvent(eventInstanceId: string) {
     return this.prisma.checkin.findMany({
       where: {
-        eventId,
+        eventInstanceId,
         checkedIn: true,
       },
       include: {

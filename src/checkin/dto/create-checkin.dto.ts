@@ -1,5 +1,9 @@
+import { ApiProperty } from '@nestjs/swagger';
 export class CreateCheckinDto {
-    userId: string;
-    eventId: string;
-  }
+  @ApiProperty()
+  userId: string;
+
+  @ApiProperty()
+  eventId: string;
+}
   

@@ -34,12 +34,26 @@ export class UsersService {
 
     // Cria check-in automático
     if (data.eventId) {
+      const eventInstance = await this.prisma.eventInstance.findFirst({
+        where: {
+          eventId: data.eventId,
+          isOpen: true, // ou use outro critério
+        },
+        orderBy: {
+          startTime: 'desc',
+        },
+      });
+      
+      if (!eventInstance) {
+        throw new Error('Nenhuma instância ativa do evento encontrada');
+      }
+      
       await this.prisma.checkin.create({
         data: {
           userId: (await user).id,
-          eventId: data.eventId,
+          eventInstanceId: eventInstance.id,
         },
-      });
+      });      
     }
 
     return user;
@@ -71,9 +85,7 @@ export class UsersService {
           name: data.eventName,
           description: data.description,
           type: data.type,
-          startDateTime: new Date(data.startDateTime),
-          endDateTime: new Date(data.endDateTime),
-          isOpen: data.isOpen ?? false,
+          // isOpen: data.isOpen ?? false,
           images: data.images ?? [],
           createdBy: user.id,
         },
@@ -85,14 +97,25 @@ export class UsersService {
           eventId: event.id,
         },
       });
+
+      const instance = await tx.eventInstance.create({
+        data: {
+          eventId: event.id,
+          date: new Date(data.startDateTime),
+          startTime: new Date(data.startDateTime),
+          endTime: new Date(data.endDateTime),
+          isOpen: data.isOpen ?? false,
+        },
+      });
   
       await tx.checkin.create({
         data: {
           userId: user.id,
-          eventId: event.id,
+          eventInstanceId: instance.id,
+          checkedIn: true,
         },
       });
-  
+      
       return { user, event };
     });
   }

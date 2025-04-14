@@ -7,39 +7,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(PLAYER)
-  eventId   String?
-  event     Event?   @relation("EventUsers", fields: [eventId], references: [id])
-  checkins  Checkin[]
-  createdAt DateTime @default(now())
-}
-
 enum Role {
   PLAYER
   LEADER
   SUBLEADER
-}
-
-
-model Event {
-  id            String     @id @default(uuid())
-  name          String
-  description   String
-  type          EventType
-  startDateTime DateTime
-  endDateTime   DateTime
-  isOpen        Boolean    @default(false)
-  images        String[] 
-  createdAt     DateTime   @default(now())
-  createdBy     String
-
-  users         User[]     @relation("EventUsers")
-  checkins      Checkin[]
 }
 
 enum EventType {
@@ -47,16 +18,71 @@ enum EventType {
   CHAMPIONSHIP
 }
 
+model User {
+  id          String        @id @default(uuid())
+  name        String
+  email       String        @unique
+  password    String
+  role        Role          @default(PLAYER)
+  eventId     String?
+  event       Event?        @relation("EventUsers", fields: [eventId], references: [id])
+  checkins    Checkin[]
+  playerStats PlayerStats[] @relation("UserToPlayerStats")
+  createdAt   DateTime      @default(now())
+}
+
+model Event {
+  id          String    @id @default(uuid())
+  name        String
+  description String
+  type        EventType
+  images      String[]
+  createdAt   DateTime  @default(now())
+  createdBy   String
+
+  users     User[]          @relation("EventUsers")
+  instances EventInstance[]
+}
+
+model EventInstance {
+  id        String   @id @default(uuid())
+  eventId   String
+  date      DateTime
+  startTime DateTime
+  endTime   DateTime
+  isOpen    Boolean  @default(false)
+
+  event    Event         @relation(fields: [eventId], references: [id])
+  checkins Checkin[]
+  stats    PlayerStats[]
+}
 
 model Checkin {
-  id        String   @id @default(uuid())
-  userId    String
-  eventId   String
-  checkedIn Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id              String   @id @default(uuid())
+  userId          String
+  eventInstanceId String
+  checkedIn       Boolean  @default(false)
+  createdAt       DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
-  event     Event    @relation(fields: [eventId], references: [id])
+  user     User          @relation(fields: [userId], references: [id])
+  instance EventInstance @relation(fields: [eventInstanceId], references: [id])
 
-  @@unique([userId, eventId])
+  @@unique([userId, eventInstanceId])
+}
+
+model PlayerStats {
+  id              String   @id @default(uuid())
+  userId          String
+  eventInstanceId String
+  points          Int      @default(0)
+  assists         Int      @default(0)
+  rebounds        Int      @default(0)
+  blocks          Int      @default(0)
+  steals          Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  user     User          @relation("UserToPlayerStats", fields: [userId], references: [id])
+  instance EventInstance @relation(fields: [eventInstanceId], references: [id])
+
+  @@unique([userId, eventInstanceId])
 }

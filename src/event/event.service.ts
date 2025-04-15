@@ -95,24 +95,63 @@ export class EventsService {
     return instance;
   }
 
-  async updateInstance(instanceId: string, data: UpdateEventInstanceDto, leaderId: string) {
+  async updateInstance(instanceId: string, dto: UpdateEventInstanceDto, leaderId: string) {
     const instance = await this.prisma.eventInstance.findUnique({
       where: { id: instanceId },
       include: { event: true },
     });
   
-    if (!instance) throw new NotFoundException('Instância não encontrada');
-    if (instance.event.createdBy !== leaderId) {
-      throw new ForbiddenException('Apenas o líder do evento pode atualizar a instância');
+    if (!instance || instance.event.createdBy !== leaderId) {
+      throw new Error('Você não tem permissão para editar essa instância');
+    }
+  
+    const data: any = {};
+  
+    if (dto.date) data.date = new Date(dto.date);
+    if (dto.startTime) data.startTime = new Date(dto.startTime);
+    if (dto.endTime) data.endTime = new Date(dto.endTime);
+    if (dto.isOpen !== undefined) data.isOpen = dto.isOpen;
+  
+    // Verificar conflito e duração mínima se quiser
+  
+    return this.prisma.eventInstance.update({
+      where: { id: instanceId },
+      data,
+    });
+  }
+
+  async deleteInstance(instanceId: string, leaderId: string) {
+    const instance = await this.prisma.eventInstance.findUnique({
+      where: { id: instanceId },
+      include: { event: true },
+    });
+  
+    if (!instance || instance.event.createdBy !== leaderId) {
+      throw new Error('Você não tem permissão para excluir essa instância');
+    }
+  
+    // Deleta checkins e stats primeiro
+    await this.prisma.checkin.deleteMany({ where: { eventInstanceId: instanceId } });
+    await this.prisma.playerStats.deleteMany({ where: { eventInstanceId: instanceId } });
+  
+    return this.prisma.eventInstance.delete({
+      where: { id: instanceId },
+    });
+  }
+  
+  async toggleInstanceOpen(instanceId: string, leaderId: string) {
+    const instance = await this.prisma.eventInstance.findUnique({
+      where: { id: instanceId },
+      include: { event: true },
+    });
+  
+    if (!instance || instance.event.createdBy !== leaderId) {
+      throw new Error('Você não tem permissão para alterar esta instância');
     }
   
     return this.prisma.eventInstance.update({
       where: { id: instanceId },
-      data: {
-        startTime: data.startTime ? new Date(data.startTime) : undefined,
-        endTime: data.endTime ? new Date(data.endTime) : undefined,
-        isOpen: data.isOpen,
-      },
+      data: { isOpen: !instance.isOpen },
     });
   }
 

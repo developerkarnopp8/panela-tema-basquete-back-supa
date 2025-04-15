@@ -89,16 +89,35 @@ export class EventsController {
     return this.eventsService.createInstance(eventId, dto, req.user.userId);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch('/instances/:id')
-  @ApiOperation({ summary: 'Atualiza os dados da Instancia' })
-  @ApiResponse({ status: 201, description: 'Instância Atualizada com sucesso' })
-  async updateInstance(
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('LEADER')
+  @ApiOperation({ summary: 'Atualiza as Instancias' })
+  @ApiResponse({ status: 201, description: 'Instância atualizada com sucesso' })
+  updateInstance(
     @Param('id') id: string,
     @Body() dto: UpdateEventInstanceDto,
     @Req() req: any,
   ) {
-    const user = req.user;
-    return this.eventsService.updateInstance(id, dto, user.userId);
+    return this.eventsService.updateInstance(id, dto, req.user.userId);
   }
+
+  @Delete('/instances/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('LEADER')
+  @ApiOperation({ summary: 'Deleta a Instancia' })
+  @ApiResponse({ status: 201, description: 'Instância deletada com sucesso' })
+  deleteInstance(@Param('id') id: string, @Req() req: any) {
+    return this.eventsService.deleteInstance(id, req.user.userId);
+  }
+
+  @Patch('/instances/:id/open')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('LEADER')
+  @ApiOperation({ summary: 'Atualiza o Toogle' })
+  @ApiResponse({ status: 201, description: 'Instância tooggle atualizado com sucesso' })
+  toggleOpen(@Param('id') id: string, @Req() req: any) {
+    return this.eventsService.toggleInstanceOpen(id, req.user.userId);
+  }
+
 }

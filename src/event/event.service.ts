@@ -104,7 +104,12 @@ export class EventsService {
     if (!instance || instance.event.createdBy !== leaderId) {
       throw new Error('Você não tem permissão para editar essa instância');
     }
-  
+    
+    const now = new Date();
+    if (instance.endTime < now) {
+      throw new BadRequestException('Instâncias já encerradas não podem ser editadas');
+    }
+    
     const data: any = {};
   
     if (dto.date) data.date = new Date(dto.date);
@@ -149,6 +154,11 @@ export class EventsService {
       throw new Error('Você não tem permissão para alterar esta instância');
     }
   
+    const now = new Date();
+    if (instance.endTime < now) {
+      throw new BadRequestException('Instância encerrada não pode mais ser alterada');
+    }
+
     return this.prisma.eventInstance.update({
       where: { id: instanceId },
       data: { isOpen: !instance.isOpen },

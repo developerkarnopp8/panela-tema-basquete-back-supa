@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { EventModule } from './event/event.module';
 import { CheckinModule } from './checkin/checkin.module';
+import { InvitesModule } from './invites/invites.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CheckinModule } from './checkin/checkin.module';
     AuthModule,
     EventModule,
     CheckinModule,
+    InvitesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

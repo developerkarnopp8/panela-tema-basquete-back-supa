@@ -30,6 +30,7 @@ import { UpdateEventInstanceDto } from './dto/update-instance.dto';
 @ApiBearerAuth()
 @Controller('events')
 export class EventsController {
+
   constructor(private readonly eventsService: EventsService) {}
 
   @UseGuards(JwtAuthGuard)
@@ -74,6 +75,14 @@ export class EventsController {
   delete(@Param('id') eventId: string, @Req() req: any) {
     const user = req.user;
     return this.eventsService.deleteEvent(eventId, user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/:id/instances')
+  @ApiOperation({ summary: 'Listar Instancia de um evento' })
+  @ApiResponse({ status: 200, description: 'Instancia retornados com sucesso' })
+  findByEventId(@Param('id') id: string) {
+    return this.eventsService.findInstancesByEvent(id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

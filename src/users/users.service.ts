@@ -120,8 +120,6 @@ export class UsersService {
     });
   }
   
-  
-
   async findUsersByEvent(eventId: string) {
     return this.prisma.user.findMany({
       where: { eventId },

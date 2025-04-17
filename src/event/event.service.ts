@@ -42,6 +42,15 @@ export class EventsService {
     });
   }
 
+  async findInstancesByEvent(eventId: string) {
+    return this.prisma.eventInstance.findMany({
+      where: { eventId },
+      orderBy: { startTime: 'asc' },
+      include: { event: true },
+    });
+  }
+  
+
   async createInstance(eventId: string, dto: CreateEventInstanceDto, leaderId: string) {
     const event = await this.prisma.event.findUnique({ where: { id: eventId } });
 
@@ -57,15 +66,13 @@ export class EventsService {
       throw new BadRequestException('A duração mínima do evento é de 60 minutos');
     }
 
+    const instanceDate = new Date(dto.date || dto.startTime);
     const overlapping = await this.prisma.eventInstance.findFirst({
       where: {
         eventId,
-        OR: [
-          {
-            startTime: { lt: end },
-            endTime: { gt: start },
-          },
-        ],
+        date: instanceDate, // só compara com instâncias do mesmo dia
+        startTime: { lt: end },
+        endTime: { gt: start },
       },
     });
 

@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsOptional, IsUUID } from 'class-validator';
 export class CreateUserDto {
   @ApiProperty()
   name: string;
@@ -10,5 +11,19 @@ export class CreateUserDto {
   password: string;
 
   @ApiProperty()
-  eventId?: string;
+  inviteCode: string;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsUUID()
+  eventId: string;
 }
+
+
+// export class CreateUserDto {
+//   name: string;
+//   email: string;
+//   password: string;
+//   inviteCode: string;
+//   eventId?: string; // Added optional eventId property
+// }

@@ -4,7 +4,9 @@ import { CreateInviteDto } from './dto/create-invite.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 @Injectable()
 export class InvitesService {
+  
     constructor(private prisma: PrismaService) {}
+
     async createInvite(dto: CreateInviteDto, leaderId: string) {
         const event = await this.prisma.event.findUnique({
           where: { id: dto.eventId },

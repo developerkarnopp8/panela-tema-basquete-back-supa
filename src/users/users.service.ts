@@ -3,6 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
 import { CreateLeaderWithEventDto } from './dto/create-leader-with-event.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -11,53 +12,56 @@ export class UsersService {
   }
   constructor(private prisma: PrismaService) {}
 
-  async create(data: { name: string; email: string; password: string; eventId?: string }) {
-    const event = await this.prisma.event.findUnique({
-      where: { id: data.eventId },
+  async create(data: CreateUserDto & { eventId?: string }) {
+    const invite = await this.prisma.invite.findUnique({
+      where: { code: data.inviteCode },
+      include: { event: true },
     });
-
-    if (!event) {
-      throw new Error('Evento não encontrado');
+  
+    if (!invite) {
+      throw new Error('Código de convite inválido');
     }
-
+  
+    if (invite.expiresAt && new Date() > invite.expiresAt) {
+      throw new Error('Convite expirado');
+    }
+  
     const hashedPassword = await bcrypt.hash(data.password, 10);
-
-    const user = this.prisma.user.create({
+  
+    const user = await this.prisma.user.create({
       data: {
         name: data.name,
         email: data.email,
         password: hashedPassword,
         role: 'PLAYER',
-        eventId: data.eventId,
+        eventId: invite.eventId,
       },
     });
-
-    // Cria check-in automático
-    if (data.eventId) {
-      const eventInstance = await this.prisma.eventInstance.findFirst({
-        where: {
-          eventId: data.eventId,
-          isOpen: true, // ou use outro critério
-        },
-        orderBy: {
-          startTime: 'desc',
-        },
-      });
-      
-      if (!eventInstance) {
-        throw new Error('Nenhuma instância ativa do evento encontrada');
-      }
-      
+  
+    // Procura instância aberta no evento
+    const eventInstance = await this.prisma.eventInstance.findFirst({
+      where: {
+        eventId: invite.eventId,
+        isOpen: true,
+      },
+      orderBy: {
+        startTime: 'desc',
+      },
+    });
+  
+    if (eventInstance) {
       await this.prisma.checkin.create({
         data: {
-          userId: (await user).id,
+          userId: user.id,
           eventInstanceId: eventInstance.id,
+          checkedIn: false, // ou true, se quiser já marcar como presente
         },
-      });      
+      });
     }
-
+  
     return user;
   }
+  
 
   async createLeader(data: CreateLeaderWithEventDto) {
   
